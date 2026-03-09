@@ -33,8 +33,16 @@ public class ToDoResponse {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime deadline = entity.getCreatedAt().plusDays(entity.getDaysToDo());
-        long daysLeft = ChronoUnit.DAYS.between(now,  deadline);
+        LocalDateTime deadline = null;
+        if (entity.getCreatedAt() != null && entity.getDaysToDo() != null) {
+            deadline = entity.getCreatedAt().plusDays(entity.getDaysToDo());
+        }
+
+        long daysLeft = 0;
+        if (deadline != null) {
+            daysLeft = ChronoUnit.DAYS.between(now.toLocalDate(), deadline.toLocalDate());
+            daysLeft = Math.max(0, daysLeft);
+        }
 
         return ToDoResponse.builder()
                 .id(entity.getId())
