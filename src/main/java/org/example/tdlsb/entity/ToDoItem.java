@@ -40,6 +40,10 @@ public class ToDoItem {
     @Column(nullable = false)
     private boolean done = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     public ToDoItem(String title, String description, Integer daysToDo) {
         this.title = title;
         this.description = description;
@@ -51,6 +55,5 @@ public class ToDoItem {
         this.done = true;
         this.completedAt = LocalDateTime.now();
     }
-
 
 }
