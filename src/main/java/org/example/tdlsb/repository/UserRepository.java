@@ -17,8 +17,10 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByEmail(String email);
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.todos WHERE u.id = :id")
-    Optional<User> findByIdWithToDoses(@Param("id") String id);
+    Optional<User> findByIdWithToDos(@Param("id") String id);
 
     @Query("SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :username, '%'))")
     Optional<User> searchByUsername(@Param("username") String username);
+
+    String id(String id);
 }
