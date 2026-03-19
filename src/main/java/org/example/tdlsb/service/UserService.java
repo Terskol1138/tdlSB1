@@ -10,6 +10,7 @@ import org.example.tdlsb.entity.User;
 import org.example.tdlsb.exception.BusinessRuleException;
 import org.example.tdlsb.exception.ResourceNotFoundException;
 import org.example.tdlsb.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
@@ -37,10 +39,12 @@ public class UserService {
             log.warn("Email already exists: {}", request.getEmail());
         }
 
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
         User user = new User(
                 request.getUsername(),
                 request.getEmail(),
-                request.getPassword() //TODO: Add password encoding
+                encodedPassword
         );
 
         User savedUser = userRepository.save(user);
@@ -119,12 +123,14 @@ public class UserService {
     public void deleteUser(String id) {
         log.info("Deleting user with id: {}", id);
 
-        if (userRepository.existsById(id)) {
+        if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("User not found" + id);
+
         }
 
         userRepository.deleteById(id);
         log.info("User deleted successfully with id: {}", id);
+
     }
 
     public long getTotalUserCount() {
