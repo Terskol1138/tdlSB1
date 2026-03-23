@@ -1,20 +1,24 @@
-//Интерфейс взаимодействия с данными
 package org.example.tdlsb.repository;
+
 import org.example.tdlsb.entity.ToDoItem;
+import org.example.tdlsb.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+
 @Repository
 public interface ToDoRepository extends JpaRepository<ToDoItem, String> {
-    List<ToDoItem> findByTitleContainingIgnoreCase(String title);
-    List<ToDoItem> findByDone(boolean done);
-    List<ToDoItem> findByDoneFalseOrderByCreatedAtDesc();
-    List<ToDoItem> findByDoneTrueOrderByCompletedAtDesc();
-    boolean existsByTitle(String title);
 
-    @Query("SELECT t FROM ToDoItem t WHERE t.done = false AND t.daysToDo <= :days")
-    List<ToDoItem> findUrgentTodos(@Param("days") int days);
+    // Методы для конкретного пользователя
+    List<ToDoItem> findByUser(User user);
+    List<ToDoItem> findByUserAndTitleContainingIgnoreCase(User user, String title);
+    List<ToDoItem> findByUserAndDoneFalseOrderByCreatedAtDesc(User user);
+    List<ToDoItem> findByUserAndDoneTrueOrderByCompletedAtDesc(User user);
+    List<ToDoItem> findByUserAndDoneTrue(User user);
+
+    // Счетчики для конкретного пользователя
+    long countByUser(User user);
+    long countByUserAndDoneFalse(User user);
+    long countByUserAndDoneTrue(User user);
 }

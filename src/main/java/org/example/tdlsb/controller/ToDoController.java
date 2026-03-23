@@ -1,7 +1,7 @@
 package org.example.tdlsb.controller;
 
 import jakarta.validation.Valid;
-import lombok.*;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.tdlsb.dto.CreateToDoRequest;
 import org.example.tdlsb.dto.ToDoResponse;
@@ -21,10 +21,9 @@ public class ToDoController {
 
     private final ToDoService toDoService;
 
-    //create
     @PostMapping
     public ResponseEntity<ToDoResponse> createToDo(@Valid @RequestBody CreateToDoRequest request) {
-        log.info("POST /api/todos - Creating new todo with title: {}", request.getTitle());
+        log.info("POST /api/todos - Creating new todo");
 
         ToDoResponse created = toDoService.createToDo(request);
 
@@ -32,10 +31,9 @@ public class ToDoController {
         return ResponseEntity.created(location).body(created);
     }
 
-    //read
     @GetMapping
-    public ResponseEntity<List<ToDoResponse>> getAllToDo() {
-        log.info("GET /api/todos - Fetching all todos");
+    public ResponseEntity<List<ToDoResponse>> getAllToDos() {
+        log.info("GET /api/todos - Fetching all todos for current user");
 
         List<ToDoResponse> todos = toDoService.getAllToDos();
         return ResponseEntity.ok(todos);
@@ -45,14 +43,13 @@ public class ToDoController {
     public ResponseEntity<ToDoResponse> getToDoById(@PathVariable String id) {
         log.info("GET /api/todos/{} - Fetching todo by ID", id);
 
-        ToDoResponse todo =toDoService.getToDoById(id);
-
+        ToDoResponse todo = toDoService.getToDoById(id);
         return ResponseEntity.ok(todo);
     }
 
     @GetMapping("/active")
     public ResponseEntity<List<ToDoResponse>> getActiveToDos() {
-        log.info("GET /api/todos - Fetching active todos");
+        log.info("GET /api/todos/active - Fetching active todos");
 
         List<ToDoResponse> todos = toDoService.getActiveToDos();
         return ResponseEntity.ok(todos);
@@ -60,7 +57,7 @@ public class ToDoController {
 
     @GetMapping("/completed")
     public ResponseEntity<List<ToDoResponse>> getCompletedToDos() {
-        log.info("GET /api/todos - Fetching completed todos");
+        log.info("GET /api/todos/completed - Fetching completed todos");
 
         List<ToDoResponse> todos = toDoService.getCompletedToDos();
         return ResponseEntity.ok(todos);
@@ -68,18 +65,18 @@ public class ToDoController {
 
     @GetMapping("/search")
     public ResponseEntity<List<ToDoResponse>> searchToDos(@RequestParam String title) {
-        log.info("GET /api/todos - Searching for todos by title: {}", title);
+        log.info("GET /api/todos/search - Searching todos by title: {}", title);
 
         List<ToDoResponse> todos = toDoService.searchByTitle(title);
         return ResponseEntity.ok(todos);
     }
 
-    //update
     @PutMapping("/{id}")
     public ResponseEntity<ToDoResponse> updateToDo(
             @PathVariable String id,
             @Valid @RequestBody UpdateToDoRequest request) {
         log.info("PUT /api/todos/{} - Updating todo", id);
+
         ToDoResponse updated = toDoService.updateToDo(id, request);
         return ResponseEntity.ok(updated);
     }
@@ -92,10 +89,9 @@ public class ToDoController {
         return ResponseEntity.ok(updated);
     }
 
-    //delete
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteToDo(@PathVariable String id) {
-        log.info("DELETE /api/todos/{}", id);
+        log.info("DELETE /api/todos/{} - Deleting todo", id);
 
         toDoService.deleteToDo(id);
         return ResponseEntity.noContent().build();
@@ -109,10 +105,9 @@ public class ToDoController {
         return ResponseEntity.noContent().build();
     }
 
-    //statistics
     @GetMapping("/count")
     public ResponseEntity<ToDoCountResponse> getCounts() {
-        log.info("GET /api/todos/count - getting statistics");
+        log.info("GET /api/todos/count - Getting statistics");
 
         ToDoCountResponse counts = ToDoCountResponse.builder()
                 .total(toDoService.getTotalCount())
@@ -123,10 +118,11 @@ public class ToDoController {
         return ResponseEntity.ok(counts);
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    // Внутренний DTO для статистики
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     public static class ToDoCountResponse {
         private long total;
         private long active;

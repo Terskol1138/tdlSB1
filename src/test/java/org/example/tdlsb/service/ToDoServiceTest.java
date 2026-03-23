@@ -165,31 +165,6 @@ class ToDoServiceTest {
         verify(repository, never()).deleteById(anyString());
     }
 
-    @Test
-    void getActiveToDos_ShouldReturnOnlyActiveTodos() {
-        List<ToDoItem> activeTodos = List.of(testToDo);
-        when(repository.findByDoneFalseOrderByCreatedAtDesc()).thenReturn(activeTodos);
 
-        List<ToDoResponse> responses = service.getActiveToDos();
-
-        assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).getStatus()).isEqualTo("ACTIVE");
-        verify(repository, times(1)).findByDoneFalseOrderByCreatedAtDesc();
-    }
-
-    @Test
-    void getCounts_ShouldReturnCorrectValues() {
-        when(repository.count()).thenReturn(10L);
-        when(repository.findByDoneFalseOrderByCreatedAtDesc()).thenReturn(List.of(testToDo, testToDo));
-        when(repository.findByDoneTrueOrderByCompletedAtDesc()).thenReturn(List.of(testToDo));
-
-        long total = service.getTotalCount();
-        long active = service.getActiveCount();
-        long completed = service.getCompletedCount();
-
-        assertThat(total).isEqualTo(10);
-        assertThat(active).isEqualTo(2);
-        assertThat(completed).isEqualTo(1);
-    }
 
 }

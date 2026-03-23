@@ -1,6 +1,5 @@
 package org.example.tdlsb.controller;
 
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +7,7 @@ import org.example.tdlsb.dto.CreateUserRequest;
 import org.example.tdlsb.dto.LoginRequest;
 import org.example.tdlsb.dto.LoginResponse;
 import org.example.tdlsb.dto.UserResponse;
+import org.example.tdlsb.security.JwtTokenProvider;
 import org.example.tdlsb.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +24,7 @@ public class AuthController {
 
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider tokenProvider;
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody CreateUserRequest request) {
@@ -36,29 +37,30 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("POST /api/auth/login - Login attempt for user: {}",  request.getUsername());
+        log.info("POST /api/auth/login - Login attempt for user: {}", request.getUsername());
 
-        try{
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
 
-            LoginResponse response = LoginResponse.builder()
-                    .message("Login successful")
-                    .username(request.getUsername())
-                    .build();
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.info("User {} logged in successfully", request.getUsername());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.warn("User {} failed to login", request.getUsername(), e.getMessage());
-            throw new RuntimeException("Invalid username or password");
-        }
+        // Генерируем JWT токен
+        String jwt = tokenProvider.generateToken(authentication);
+
+        LoginResponse response = LoginResponse.builder()
+                .token(jwt)
+                .type("Bearer")
+                .username(request.getUsername())
+                .build();
+
+        log.info("User {} logged in successfully, token generated", request.getUsername());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
+        // Для JWT просто очищаем контекст
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok("Logout successful");
     }

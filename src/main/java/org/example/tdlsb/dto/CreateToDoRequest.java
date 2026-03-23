@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.tdlsb.entity.ToDoItem;
+import org.example.tdlsb.entity.User;
 
 @Data
 @Builder
@@ -25,12 +26,13 @@ public class CreateToDoRequest {
     @Max(value = 365, message = "Days cannot exceed 365")
     private Integer daysToDo;
 
-    public ToDoItem toEntity() {
+    public ToDoItem toEntity(User user) {
         ToDoItem todo = new ToDoItem();
         todo.setTitle(this.title);
         todo.setDescription(this.description);
         todo.setDaysToDo(this.daysToDo);
         todo.setDone(false);
+        todo.setUser(user);
         return todo;
     }
 }

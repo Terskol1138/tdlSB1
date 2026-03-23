@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - ToDo List</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #eee; }
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-card { flex: 1; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center; border-left: 4px solid #007bff; }
+        .stat-card h3 { margin: 0 0 10px 0; color: #666; font-size: 14px; }
+        .stat-card .number { font-size: 28px; font-weight: bold; color: #007bff; }
+        .add-todo { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .add-todo h3 { margin-top: 0; }
+        .add-todo input, .add-todo textarea, .add-todo select {
+            margin: 5px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;
+        }
+        .add-todo button {
+            margin-top: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;
+        }
+        .add-todo button:hover { background: #0056b3; }
+        .filter-buttons { margin-bottom: 20px; display: flex; gap: 10px; }
+        .filter-buttons button { padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .filter-buttons button:hover { background: #5a6268; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; }
+        .completed { text-decoration: line-through; color: #999; }
+        .status-active { color: #28a745; font-weight: bold; }
+        .status-completed { color: #6c757d; }
+        button.complete { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px; }
+        button.complete:hover { background: #218838; }
+        button.delete { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        button.delete:hover { background: #c82333; }
+        .logout-btn { background: #6c757d; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; }
+        .logout-btn:hover { background: #5a6268; }
+        .error-msg { color: red; margin-top: 10px; display: none; }
+        .loading { text-align: center; padding: 20px; color: #666; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📝 My ToDo List</h1>
+        <a href="#" class="logout-btn" onclick="logout()">Logout</a>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>Total Tasks</h3>
+            <div class="number" id="total">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Active</h3>
+            <div class="number" id="active">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Completed</h3>
+            <div class="number" id="completed">0</div>
+        </div>
+    </div>
+
+    <div class="add-todo">
+        <h3>➕ Add New Task</h3>
+        <input type="text" id="title" placeholder="Task title (required)" style="width: 100%;">
+        <textarea id="description" placeholder="Description (optional)" rows="2" style="width: 100%;"></textarea>
+        <input type="number" id="daysToDo" placeholder="Days to complete (1-365)" min="1" max="365">
+        <button onclick="createTodo()">Add Task</button>
+    </div>
+
+    <div class="filter-buttons">
+        <button onclick="loadTodos('all')">All Tasks</button>
+        <button onclick="loadTodos('active')">Active</button>
+        <button onclick="loadTodos('completed')">Completed</button>
+        <button onclick="deleteCompleted()" style="background: #dc3545;">Delete All Completed</button>
+    </div>
+
+    <div id="errorMsg" class="error-msg"></div>
+
+    <table id="todoTable">
+        <thead>
+        <tr><th>Title</th><th>Description</th><th>Days Left</th><th>Status</th><th>Actions</th</tr>
+        </thead>
+        <tbody id="todoBody">
+        <tr><td colspan="5" class="loading">Loading tasks...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Получаем токен из localStorage
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+
+    // Если нет токена - редирект на логин
+    if (!token) {
+        console.log('No token found, redirecting to login');
+        window.location.href = '/login';
+    }
+
+    console.log('Dashboard loaded with user:', username);
+
+    // Функция для API запросов
+    async function apiRequest(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            }
+        });
+
+        if (response.status === 401) {
+            console.log('Token expired or invalid, redirecting to login');
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = '/login';
+            return null;
+        }
+
+        return response;
+    }
+
+    // Загрузка todos
+    async function loadTodos(filter = 'all') {
+        let url = '/api/todos';
+        if (filter === 'active') url = '/api/todos/active';
+        if (filter === 'completed') url = '/api/todos/completed';
+
+        try {
+            const response = await apiRequest(url);
+            if (!response) return;
+
+            if (response.ok) {
+                const todos = await response.json();
+                renderTodos(todos);
+                loadStats();
+            } else {
+                showError('Failed to load tasks');
+            }
+        } catch (error) {
+            console.error('Error loading todos:', error);
+            showError('Network error');
+        }
+    }
+
+    // Загрузка статистики
+    async function loadStats() {
+        try {
+            const response = await apiRequest('/api/todos/count');
+            if (response && response.ok) {
+                const stats = await response.json();
+                document.getElementById('total').textContent = stats.total;
+                document.getElementById('active').textContent = stats.active;
+                document.getElementById('completed').textContent = stats.completed;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+
+    // Создание todo
+    async function createTodo() {
+        const title = document.getElementById('title').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const daysToDo = document.getElementById('daysToDo').value;
+
+        if (!title) {
+            alert('Please enter a title');
+            return;
+        }
+
+        if (!daysToDo || daysToDo < 1 || daysToDo > 365) {
+            alert('Please enter days between 1 and 365');
+            return;
+        }
+
+        const response = await apiRequest('/api/todos', {
+            method: 'POST',
+            body: JSON.stringify({
+                title,
+                description: description || null,
+                daysToDo: parseInt(daysToDo)
+            })
+        });
+
+        if (response && response.ok) {
+            document.getElementById('title').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('daysToDo').value = '';
+            loadTodos('all');
+        } else {
+            alert('Failed to create task');
+        }
+    }
+
+    // Завершить todo
+    async function markComplete(id) {
+        const response = await apiRequest(`/api/todos/${id}/complete`, { method: 'PATCH' });
+        if (response && response.ok) {
+            loadTodos('all');
+        }
+    }
+
+    // Удалить todo
+    async function deleteTodo(id) {
+        if (confirm('Delete this task?')) {
+            const response = await apiRequest(`/api/todos/${id}`, { method: 'DELETE' });
+            if (response && response.ok) {
+                loadTodos('all');
+            }
+        }
+    }
+
+    // Удалить все завершенные
+    async function deleteCompleted() {
+        if (confirm('Delete all completed tasks?')) {
+            const response = await apiRequest('/api/todos/completed', { method: 'DELETE' });
+            if (response && response.ok) {
+                loadTodos('all');
+            }
+        }
+    }
+
+    // Отображение todos
+    function renderTodos(todos) {
+        const tbody = document.getElementById('todoBody');
+        if (!todos || todos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No tasks found 🎉</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = todos.map(todo => `
+                <tr>
+                    <td class="${todo.status === 'COMPLETED' ? 'completed' : ''}">${escapeHtml(todo.title)}</td>
+                    <td>${escapeHtml(todo.description || '-')}</td>
+                    <td>${todo.daysLeft}</td>
+                    <td class="${todo.status === 'ACTIVE' ? 'status-active' : 'status-completed'}">${todo.status}</td>
+                    <td>
+                        ${todo.status === 'ACTIVE' ?
+            `<button class="complete" onclick="markComplete('${todo.id}')">✓ Complete</button>` : ''}
+                        <button class="delete" onclick="deleteTodo('${todo.id}')">✗ Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+    }
+
+    // Защита от XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function showError(msg) {
+        const errorDiv = document.getElementById('errorMsg');
+        errorDiv.textContent = msg;
+        errorDiv.style.display = 'block';
+        setTimeout(() => errorDiv.style.display = 'none', 3000);
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        window.location.href = '/login';
+    }
+
+    // Загружаем todos при загрузке страницы
+    loadTodos('all');
+</script>
+</body>
+</html>
